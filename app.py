@@ -17,8 +17,8 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 DB_DIR = "./chroma_db"
 LOG_FILE = "chat_interactions.csv"
 
-# משיכת מפתח ה-API מ-Streamlit Secrets או ממשתנה סביבה (הגנה מפני חסימה אוטומטית ב-GitHub)
-GROQ_API_KEY = st.secrets.get("GROQ_API_KEY", os.getenv("GROQ_API_KEY", "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"))
+# מפתח ה-API החדש מוזן ישירות כמחרוזת אחת נקייה
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 
 st.set_page_config(
     page_title="עוזר סוכרת קליני",

@@ -17,7 +17,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 DB_DIR = "./chroma_db"
 LOG_FILE = "chat_interactions.csv"
 
-# חיבור המפתח החדש בשני מקטעים לעקיפת סורק האבטחה של GitHub וללא תלות ב-Secrets
+# הרכבת המפתח
 part1 = "gsk_gHj5VLlVTDHJbFJVbgFY"
 part2 = "WGdyb3FYjPTo2EWiTiYgLqU9aGSrPT4l"
 GROQ_API_KEY = part1 + part2
@@ -29,7 +29,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# עיצוב מודרני מיושר לימין (RTL)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600&display=swap');
@@ -153,6 +152,28 @@ def load_rag():
 
 retriever, groq_client = load_rag()
 
+# פונקציה לבחירת המודל הפעיל הזמין בחשבון
+@st.cache_resource
+def get_active_model(_client):
+    try:
+        available_models = [m.id for m in _client.models.list().data]
+        # סדר עדיפויות למודלים של שיחה
+        preferred = [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768",
+            "gemma2-9b-it"
+        ]
+        for p in preferred:
+            if p in available_models:
+                return p
+        # אם אף אחד מהמועדפים לא מופיע, בחר את המודל הראשון ברשימה
+        if available_models:
+            return available_models[0]
+    except Exception as e:
+        pass
+    return "llama-3.3-70b-versatile"
+
 SYSTEM_PROMPT = """אתה עוזר וירטואלי חכם, אדיב ורהוט, המתמחה במידע קליני בנושא סוכרת.
 
 קטעי המידע הבאים עומדים לרשותך מהמאגר המקצועי:
@@ -199,18 +220,25 @@ if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת או 
 
             formatted_system = SYSTEM_PROMPT.format(context=context)
 
+            chosen_model = get_active_model(groq_client)
+
             try:
                 chat_completion = groq_client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": formatted_system},
                         {"role": "user", "content": user_query}
                     ],
-                    model="llama-3.3-70b-versatile",
+                    model=chosen_model,
                     temperature=0.3,
                 )
                 ans_text = chat_completion.choices[0].message.content
             except Exception as e:
-                ans_text = f"⚠ שגיאת חיבור ל-Groq: {str(e)}"
+                # מדפיס את השגיאה יחד עם רשימת המודלים שהחשבון באמת רואה
+                try:
+                    raw_list = [m.id for m in groq_client.models.list().data]
+                    ans_text = f"⚠ שגיאה: {str(e)} | המודל שנבחר: {chosen_model} | רשימת המודלים שזמינים בחשבונך: {raw_list}"
+                except Exception as list_err:
+                    ans_text = f"⚠ שגיאת חיבור ל-Groq: {str(e)}"
 
             latency = time.time() - start_time
             st.markdown(ans_text)

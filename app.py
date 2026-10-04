@@ -3,10 +3,16 @@ import csv
 import os
 import time
 import uuid
+import gc
+import torch
 from datetime import datetime
 from groq import Groq
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+
+# הגבלת משאבי CPU וזיכרון למניעת קריסת OOM בענן
+torch.set_num_threads(1)
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 DB_DIR = "./chroma_db"
 LOG_FILE = "chat_interactions.csv"
@@ -19,6 +25,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# עיצוב מודרני מיושר לימין (RTL)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600&display=swap');
@@ -128,12 +135,18 @@ def log_interaction(session_id: str, question: str, answer: str, sources: list, 
 
 @st.cache_resource
 def load_rag():
+    # טעינה חסכונית במיוחד ב-RAM
     embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True, "batch_size": 1}
     )
     vectorstore = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
     client = Groq(api_key=GROQ_API_KEY)
+    
+    # פינוי זיכרון עודף לאחר טעינת המודל
+    gc.collect()
     return retriever, client
 
 retriever, groq_client = load_rag()
@@ -183,7 +196,6 @@ if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת או 
 
             formatted_system = SYSTEM_PROMPT.format(context=context)
 
-            # קריאה ישירה ונקייה ל-Groq API
             chat_completion = groq_client.chat.completions.create(
                 messages=[
                     {"role": "system", "content": formatted_system},

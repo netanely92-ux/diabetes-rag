@@ -9,7 +9,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
-# נתיבים יחסיים שמתאימים לענן
 DB_DIR = "./chroma_db"
 LOG_FILE = "chat_interactions.csv"
 GROQ_API_KEY = "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"
@@ -135,31 +134,36 @@ def load_rag():
         model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
     )
     vectorstore = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
     
+    # שימוש ב-llama-3.1-8b-instant למהירות מקסימלית ואמינות API
     llm = ChatGroq(
-        model="llama-3.1-70b-versatile",
+        model="llama-3.1-8b-instant",
         groq_api_key=GROQ_API_KEY,
-        temperature=0.2
+        temperature=0.3
     )
     return retriever, llm
 
 retriever, llm = load_rag()
 
-SYSTEM_PROMPT = """אתה עוזר מידע קליני מוסמך, אדיב ונעים בנושא סוכרת.
-קטעי המידע הבאים עומדים לרשותך:
+SYSTEM_PROMPT = """אתה עוזר וירטואלי חכם, אדיב, רהוט ונעים לשיחה, המתמחה במידע קליני בנושא סוכרת.
+
+קטעי המידע הבאים עומדים לרשותך מהמאגר:
 {context}
 
-הנחיות התנהגות:
-1. ברכות ושיחת פתיחה: אם המשתמש מברך לשלום ("שלום", "היי", "בוקר טוב"), ענה בברכה חמה, אדיבה וקצרה והצע לו לשאול כל שאלה בנושא סוכרת. אל תרצה לו הרצאה רפואית על ברכת שלום.
-2. שאלות מקצועיות: השב בהתבסס על המידע הרפואי שסופקו. נסח את המענה בעברית טבעית, רהוטה וברורה (פסקאות קצרות או תבליטים).
-3. אם מידע מסוים אינו ידוע או לא מופיע בקטעים, ציין זאת בפשטות ובכנות והמלץ להיוועץ ברופא מטפל.
+הנחיות לתגובה:
+1. שיחה כללית וברכות: אם המשתמש פותח בברכה ("שלום", "היי", "מה נשמע", "בוקר טוב") או שואל שאלה כללית על מי אתה, הגב בצורה טבעית, חמה ואנושית. ספר בקצרה שאתה כאן כדי לסייע בכל שאלה בנושא סוכרת, מניעה, תזונה ובריאות.
+2. שאלות מקצועיות על סוכרת: נסח תשובה ברורה, ממוקדת ומקצועית בהתבסס על המידע הרפואי. השתמש בפסקאות נוחות לקריאה או ברשימות תבליטים.
+3. מידע שלא מופיע: אם נשאלת שאלה רפואית שאין לגביה מידע בקטעים, ציין זאת בפשטות ובכנות, והמלץ להיוועץ ברופא המטפל.
+4. שפה: ענה תמיד בעברית טבעית, רהוטה וזורמת.
 """
 
 prompt = ChatPromptTemplate.from_messages([
     ("system", SYSTEM_PROMPT),
     ("human", "{question}")
 ])
+
+GREETINGS = {"שלום", "היי", "הי", "בוקר טוב", "ערב טוב", "צהריים טובים", "מה קורה", "מה נשמע", "מי אתה", "תודה", "תודה רבה"}
 
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())[:8]
@@ -171,7 +175,7 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת..."):
+if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת או פתח בשיחה..."):
     st.session_state.messages.append({"role": "user", "content": user_query})
     with st.chat_message("user"):
         st.markdown(user_query)
@@ -179,16 +183,24 @@ if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת..."):
     with st.chat_message("assistant"):
         with st.spinner("מעבד תשובה..."):
             start_time = time.time()
-            
-            docs = retriever.invoke(user_query)
-            context = "\n\n---\n\n".join([doc.page_content for doc in docs])
-            
+            clean_q = user_query.strip().lower()
+
+            # מענה מהיר ומותאם לשיחת פתיחה ללא הרצת RAG מיותרת
+            if clean_q in GREETINGS or len(clean_q.split()) <= 2 and any(w in clean_q for w in ["שלום", "היי", "הי", "מה נשמע", "מה קורה"]):
+                docs = []
+                context = "אין צורך במקורות - שיחת פתיחה או ברכה."
+                sources = []
+            else:
+                docs = retriever.invoke(user_query)
+                # חיתוך מקטעים ארוכים למניעת עומס על ה-API
+                context = "\n\n---\n\n".join([doc.page_content[:1500] for doc in docs])
+                sources = list(set([doc.metadata.get("source", "Unknown") for doc in docs]))
+
             chain = prompt | llm
             response = chain.invoke({"context": context, "question": user_query})
             ans_text = response.content
             
             latency = time.time() - start_time
-            sources = list(set([doc.metadata.get("source", "Unknown") for doc in docs]))
             
             st.markdown(ans_text)
             

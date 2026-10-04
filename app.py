@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import sys
 import time
 import uuid
 import gc
@@ -10,9 +11,14 @@ from supabase import create_client, Client
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 
+# אכיפת קידוד UTF-8 גלובלי למניעת שגיאות קידוד ASCII
+os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["LANG"] = "C.UTF-8"
+os.environ["LC_ALL"] = "C.UTF-8"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 # הגבלת משאבי CPU וזיכרון למניעת קריסות בענן
 torch.set_num_threads(1)
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # הגדרות Groq API
 part1 = "gsk_gHj5VLlVTDHJbFJVbgFY"
@@ -38,7 +44,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# הגדרת כיווניות RTL ועיצוב קליני
+# עיצוב CSS ותמיכת RTL מלאה
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
@@ -136,7 +142,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# אתחול Session State
+# אתחול משתני Session State
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())[:8]
 
@@ -146,27 +152,32 @@ if "demographics_completed" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# פונקציות שמירה ל-Supabase
+# פונקציות שמירה ל-Supabase עם טיפול שגיאות והמרה מפורשת ל-UTF-8
 def save_participant(session_id: str, demographics_data: dict):
     try:
         supabase.table("participants").insert({
-            "session_id": session_id,
+            "session_id": str(session_id),
             "demographics": demographics_data
         }).execute()
     except Exception as e:
-        st.error(f"שגיאת שמירת משתתף: {e}")
+        st.error(f"שגיאת שמירת נתוני שאלון: {str(e)}")
 
 def log_interaction(session_id: str, question: str, answer: str, sources: list, latency: float):
     try:
+        clean_question = question.encode('utf-8', 'ignore').decode('utf-8')
+        clean_answer = answer.encode('utf-8', 'ignore').decode('utf-8')
+        clean_sources = "; ".join(str(s) for s in sources) if sources else ""
+        clean_sources = clean_sources.encode('utf-8', 'ignore').decode('utf-8')
+
         supabase.table("chat_interactions").insert({
-            "session_id": session_id,
-            "user_question": question,
-            "model_answer": answer,
-            "retrieved_sources": "; ".join(sources),
-            "latency_seconds": round(latency, 2)
+            "session_id": str(session_id),
+            "user_question": clean_question,
+            "model_answer": clean_answer,
+            "retrieved_sources": clean_sources,
+            "latency_seconds": round(float(latency), 2)
         }).execute()
     except Exception as e:
-        st.error(f"שגיאת תיעוד שיחה: {e}")
+        st.error(f"שגיאת תיעוד שיחה: {str(e)}")
 
 # שלב 1: שאלון רקע מלא (19 שאלות)
 if not st.session_state.demographics_completed:
@@ -326,7 +337,6 @@ if not st.session_state.demographics_completed:
         submitted = st.form_submit_button("סיום שאלון ומעבר לשיחה עם העוזר הקליני ←")
 
         if submitted:
-            # בדיקת מענה על שאלות חובה
             mandatory_checks = [
                 q1_age, q2_gender, q3_education, q4_residence, q5_internet_freq,
                 q6_smartphone_freq, q7_ai_experience, q8_chatbot_freq, q9_health_status,
@@ -337,7 +347,6 @@ if not st.session_state.demographics_completed:
             if any(item is None for item in mandatory_checks):
                 st.warning("אנא השלם/י את כל השאלות לפני המעבר לשיחה.")
             else:
-                # איסוף שימושים טכנולוגיים
                 tech_uses = []
                 if tech_comm: tech_uses.append("תקשורת (WhatsApp, מיילים)")
                 if tech_search: tech_uses.append("חיפוש מידע באינטרנט")
@@ -372,7 +381,7 @@ if not st.session_state.demographics_completed:
                 st.session_state.demographics_completed = True
                 st.rerun()
 
-# שלב 2: מסך הצ'אט (מוצג רק לאחר מילוי השאלון)
+# שלב 2: מסך הצ'אט
 else:
     @st.cache_resource
     def load_rag():

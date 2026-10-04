@@ -135,7 +135,6 @@ def log_interaction(session_id: str, question: str, answer: str, sources: list, 
 
 @st.cache_resource
 def load_rag():
-    # טעינה חסכונית במיוחד ב-RAM
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         model_kwargs={"device": "cpu"},
@@ -145,7 +144,6 @@ def load_rag():
     retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
     client = Groq(api_key=GROQ_API_KEY)
     
-    # פינוי זיכרון עודף לאחר טעינת המודל
     gc.collect()
     return retriever, client
 
@@ -196,17 +194,29 @@ if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת או 
 
             formatted_system = SYSTEM_PROMPT.format(context=context)
 
-            chat_completion = groq_client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": formatted_system},
-                    {"role": "user", "content": user_query}
-                ],
-                model="llama3-8b-8192",
-                temperature=0.3,
-            )
-            ans_text = chat_completion.choices[0].message.content
+            candidate_models = ["llama-3.1-8b-instant", "llama-3.3-70b-versatile"]
+            ans_text = ""
+
+            for model_name in candidate_models:
+                try:
+                    chat_completion = groq_client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": formatted_system},
+                            {"role": "user", "content": user_query}
+                        ],
+                        model=model_name,
+                        temperature=0.3,
+                    )
+                    ans_text = chat_completion.choices[0].message.content
+                    if ans_text:
+                        break
+                except Exception:
+                    continue
+
+            if not ans_text:
+                ans_text = "חלה שגיאה בעיבוד התשובה מול השרת. אנא נסח את השאלה שוב או נסה בעוד רגע."
+
             latency = time.time() - start_time
-            
             st.markdown(ans_text)
             
             log_interaction(

@@ -203,12 +203,12 @@ if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת או 
                         {"role": "system", "content": formatted_system},
                         {"role": "user", "content": user_query}
                     ],
-                    model="llama-3.1-8b-instant",
+                    model="llama-3.3-70b-versatile",
                     temperature=0.3,
                 )
                 ans_text = chat_completion.choices[0].message.content
             except Exception as e:
-                ans_text = f"⚠️️ שגיאת חיבור ל-Groq: {str(e)}"
+                ans_text = f"⚠ שגיאת חיבור ל-Groq: {str(e)}"
 
             latency = time.time() - start_time
             st.markdown(ans_text)

@@ -4,10 +4,9 @@ import os
 import time
 import uuid
 from datetime import datetime
+from groq import Groq
 from langchain_community.vectorstores import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_groq import ChatGroq
-from langchain_core.prompts import ChatPromptTemplate
 
 DB_DIR = "./chroma_db"
 LOG_FILE = "chat_interactions.csv"
@@ -20,7 +19,6 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# עיצוב מודרני מיושר לימין (RTL)
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600&display=swap');
@@ -102,7 +100,7 @@ st.markdown("""
 st.markdown("""
 <div class="hero-container">
     <h2>🩺 עוזר מידע קליני בנושא סוכרת</h2>
-    <p>מענה מהיר לשאלות בנושאי מניעה, תסמינים, תזונה וטיפול קליני</p>
+    <p>מענה לשאלות בנושאי מניעה, תסמינים, תזונה וטיפול קליני</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -135,33 +133,21 @@ def load_rag():
     )
     vectorstore = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
-    
-    # שימוש במזהה הדגם הפעיל והיציב ביותר ב-Groq
-    llm = ChatGroq(
-        model="llama3-8b-8192",
-        groq_api_key=GROQ_API_KEY,
-        temperature=0.2
-    )
-    return retriever, llm
+    client = Groq(api_key=GROQ_API_KEY)
+    return retriever, client
 
-retriever, llm = load_rag()
+retriever, groq_client = load_rag()
 
-SYSTEM_PROMPT = """אתה עוזר מידע קליני חכם, אדיב, רהוט ונעים לשיחה, המתמחה בסוכרת.
+SYSTEM_PROMPT = """אתה עוזר וירטואלי חכם, אדיב ורהוט, המתמחה במידע קליני בנושא סוכרת.
 
-קטעי המידע הבאים עומדים לרשותך מהמאגר המקצועי:
+קטעי המידע הבאים עומדים לרשותך מהמאגר:
 {context}
 
 הנחיות לתגובה:
-1. שיחת פתיחה וברכות: אם המשתמש מברך לשלום ("שלום", "היי", "מה נשמע", "בוקר טוב") או מודה לך ("תודה"), השב בצורה נעימה, קצרה וטבעית. הסבר בקצרה שאתה כאן לסייע בשאלות הקשורות לסוכרת, תזונה ואורח חיים בריא.
-2. שאלות מקצועיות: השב בהתבסס על המידע הרפואי שסופק. נסח תשובה ברורה, ממוקדת ומקצועית (מומלץ להשתמש בתבליטים לקריאה נוחה).
-3. חוסר במידע: אם נשאלת שאלה רפואית שאין לה מענה בקטעים, ציין זאת בפשטות והמלץ להיוועץ ברופא המטפל.
-4. ענה תמיד בעברית טבעית ורהוטה.
+1. ברכות ושיחת חולין: אם המשתמש מברך ("שלום", "היי", "מה נשמע", "תודה"), ענה בצורה חמה ואדיבה בעברית טבעית והסבר שאתה כאן לסייע בשאלות על סוכרת, תזונה ומניעה.
+2. שאלות מקצועיות: ענה בצורה ברורה ומובנית על פי המידע הרפואי שסופק.
+3. מידע חסר: אם נשאלת שאלה שאין לה מענה במידע הנתון, ציין זאת בפשטות והמלץ להיוועץ ברופא.
 """
-
-prompt = ChatPromptTemplate.from_messages([
-    ("system", SYSTEM_PROMPT),
-    ("human", "{question}")
-])
 
 GREETINGS = {"שלום", "היי", "הי", "בוקר טוב", "ערב טוב", "צהריים טובים", "מה קורה", "מה נשמע", "מי אתה", "תודה", "תודה רבה"}
 
@@ -185,21 +171,28 @@ if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת או 
             start_time = time.time()
             clean_q = user_query.strip().lower()
 
-            # בדיקה האם זו פנייה כללית / ברכה
             is_greeting = clean_q in GREETINGS or (len(clean_q.split()) <= 2 and any(w in clean_q for w in ["שלום", "היי", "הי", "מה נשמע", "מה קורה"]))
 
             if is_greeting:
-                context = "שיחת פתיחה / ברכה - אין צורך בהקשר רפואי."
+                context = "שיחת פתיחה או ברכה. ענה בצורה חמה ולבבית."
                 sources = []
             else:
                 docs = retriever.invoke(user_query)
                 context = "\n\n---\n\n".join([doc.page_content[:1500] for doc in docs])
                 sources = list(set([doc.metadata.get("source", "Unknown") for doc in docs]))
 
-            chain = prompt | llm
-            response = chain.invoke({"context": context, "question": user_query})
-            ans_text = response.content if hasattr(response, "content") else str(response)
-            
+            formatted_system = SYSTEM_PROMPT.format(context=context)
+
+            # קריאה ישירה ונקייה ל-Groq API
+            chat_completion = groq_client.chat.completions.create(
+                messages=[
+                    {"role": "system", "content": formatted_system},
+                    {"role": "user", "content": user_query}
+                ],
+                model="llama3-8b-8192",
+                temperature=0.3,
+            )
+            ans_text = chat_completion.choices[0].message.content
             latency = time.time() - start_time
             
             st.markdown(ans_text)

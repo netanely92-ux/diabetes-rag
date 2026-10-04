@@ -23,8 +23,7 @@ DB_DIR = "./chroma_db"
 
 # הגדרות Supabase
 SUPABASE_URL = "https://jscuqbkruilcpzxuedwm.supabase.co"
-# הדבק כאן את ה-Publishable Key שהעתקת:
-SUPABASE_KEY = "הדבק_כאן_את_ה_KEY_שלך"
+SUPABASE_KEY = "sb_publishable_omrw8g5n3OxadaDZZWPcjw_r_9aIWlJ"
 
 @st.cache_resource
 def get_supabase_client() -> Client:
@@ -79,7 +78,6 @@ st.markdown("""
         color: #64748b;
     }
 
-    /* טופס שאלון */
     .stForm {
         background: #ffffff !important;
         padding: 2rem !important;
@@ -170,48 +168,207 @@ def log_interaction(session_id: str, question: str, answer: str, sources: list, 
     except Exception as e:
         st.error(f"שגיאת תיעוד שיחה: {e}")
 
-# שלב 1: שאלון מקדים
+# שלב 1: שאלון רקע מלא (19 שאלות)
 if not st.session_state.demographics_completed:
-    st.subheader("שאלון מקדים קצר")
-    st.write("לפני תחילת השיחה, אנא ענה על מספר שאלות רקע קצרות לצורכי המחקר:")
+    st.subheader("שאלון רקע קצר")
+    st.write("אנא סמן/י את התשובה המתאימה ביותר בכל אחד מהסעיפים הבאים לפני תחילת השיחה:")
 
     with st.form("demographics_form"):
-        age_group = st.selectbox(
-            "קבוצת גיל:",
-            ["בחר/י...", "מתחת ל-25", "25-34", "35-44", "45-54", "55-64", "65 ומעלה"]
-        )
-        gender = st.selectbox(
-            "מגדר:",
-            ["בחר/י...", "אישה", "גבר", "אחר / מעדיף לא לציין"]
-        )
-        diabetes_relation = st.selectbox(
-            "מהי מידת ההיכרות שלך עם תחום הסוכרת?",
-            [
-                "בחר/י...",
-                "אין לי היכרות אישית",
-                "בן משפחה או חבר קרוב מתמודד עם סוכרת",
-                "אני מאובחן/ת עם טרום סוכרת או סוכרת",
-                "רקע מקצועי / עולם הבריאות"
-            ]
-        )
-        ai_experience = st.select_slider(
-            "עד כמה את/ה משתמש/ת בכלי בינה מלאכותית (כגון ChatGPT) בחיי היומיום?",
-            options=["כלל לא", "לעיתים רחוקות", "מדי פעם", "לעיתים קרובות", "באופן קבוע ויומיומי"]
+        # 1. גיל
+        q1_age = st.radio(
+            "1. גיל:",
+            ["60–64", "65–69", "70–74", "75–79", "80 ומעלה"],
+            index=None
         )
 
-        submitted = st.form_submit_button("המשך לשיחה עם העוזר הקליני ←")
+        # 2. מגדר
+        q2_gender = st.radio(
+            "2. מגדר:",
+            ["גבר", "אישה", "אחר", "מעדיף/ה לא לציין"],
+            index=None
+        )
+
+        # 3. השכלה
+        q3_education = st.radio(
+            "3. רמת השכלה:",
+            [
+                "ללא השכלה פורמלית",
+                "השכלה תיכונית",
+                "השכלה על־תיכונית / מקצועית",
+                "תואר ראשון",
+                "תואר שני ומעלה"
+            ],
+            index=None
+        )
+
+        # 4. מקום מגורים
+        q4_residence = st.radio(
+            "4. מקום מגורים:",
+            ["עיר גדולה", "עיר קטנה / יישוב עירוני", "יישוב כפרי / מושב / קיבוץ"],
+            index=None
+        )
+
+        # 5. תדירות שימוש באינטרנט
+        q5_internet_freq = st.radio(
+            "5. תדירות שימוש באינטרנט:",
+            ["יומי", "מספר פעמים בשבוע", "לעיתים רחוקות", "כלל לא"],
+            index=None
+        )
+
+        # 6. תדירות שימוש בסמארטפון
+        q6_smartphone_freq = st.radio(
+            "6. תדירות שימוש בסמארטפון:",
+            ["יומי", "מספר פעמים בשבוע", "לעיתים רחוקות", "כלל לא"],
+            index=None
+        )
+
+        # 7. ניסיון ב-AI
+        q7_ai_experience = st.radio(
+            "7. רמת ניסיון בשימוש במערכות בינה מלאכותית (AI):",
+            [
+                "אין ניסיון כלל",
+                "ניסיון בסיסי (שימוש מועט או התנסות ראשונית)",
+                "ניסיון בינוני (שימוש תקופתי)",
+                "ניסיון מתקדם (שימוש קבוע ומגוון)"
+            ],
+            index=None
+        )
+
+        # 8. תדירות שימוש בצ'אטבוטים
+        q8_chatbot_freq = st.radio(
+            "8. תדירות שימוש בצ'אטבוטים מבוססי בינה מלאכותית (כגון ChatGPT, Gemini):",
+            ["יומי", "מספר פעמים בשבוע", "לעיתים רחוקות", "כלל לא"],
+            index=None
+        )
+
+        # 9. מצב בריאותי כללי
+        q9_health_status = st.radio(
+            "9. מצב בריאותי כללי (הערכתך האישית):",
+            ["מצוין", "טוב", "בינוני", "ירוד"],
+            index=None
+        )
+
+        # 10. חיפוש מידע רפואי באינטרנט
+        q10_health_search_freq = st.radio(
+            "10. באיזו תדירות את/ה מחפש/ת מידע רפואי באינטרנט?",
+            ["לעיתים קרובות", "לעיתים", "לעיתים רחוקות", "אף פעם"],
+            index=None
+        )
+
+        # 11. שפת אם
+        q11_native_lang = st.radio(
+            "11. שפת אם:",
+            ["עברית", "ערבית", "רוסית", "אנגלית", "אחר"],
+            index=None
+        )
+        q11_other = st.text_input("אם בחרת 'אחר' בשפת אם, פרט/י כאן:")
+
+        # 12. שפת חיפוש באינטרנט
+        q12_search_lang = st.radio(
+            "12. באיזו שפה את/ה משתמש/ת לרוב בעת חיפוש מידע באינטרנט?",
+            ["עברית", "אנגלית", "שפה אחרת"],
+            index=None
+        )
+        q12_other = st.text_input("אם בחרת 'שפה אחרת' בחיפוש, פרט/י כאן:")
+
+        # 13. שימוש במכשירים דיגיטליים
+        q13_digital_devices = st.radio(
+            "13. עד כמה את/ה משתמש/ת במכשירים דיגיטליים (מחשב, סמארטפון, טאבלט) ביום־יום?",
+            ["כלל לא", "במידה מועטה", "במידה בינונית", "במידה רבה", "במידה רבה מאוד"],
+            index=None
+        )
+
+        # 14. שימושים בטכנולוגיה (בחירה מרובה)
+        st.markdown("**14. לאילו שימושים את/ה נעזר/ת בטכנולוגיה? (ניתן לסמן יותר מתשובה אחת):**")
+        tech_comm = st.checkbox("תקשורת (WhatsApp, מיילים)")
+        tech_search = st.checkbox("חיפוש מידע באינטרנט")
+        tech_admin = st.checkbox("ניהול עניינים אישיים (בנק, קופות חולים וכו')")
+        tech_content = st.checkbox("צריכת תוכן (חדשות, סרטונים)")
+        tech_social = st.checkbox("רשתות חברתיות")
+        tech_other = st.text_input("שימוש אחר:")
+
+        # 15. ביטחון בטכנולוגיה חדשה
+        q15_tech_confidence = st.radio(
+            "15. עד כמה את/ה מרגיש/ה ביטחון ביכולת שלך להשתמש בטכנולוגיה חדשה (אפליקציות, אתרים חדשים)?",
+            ["כלל לא בטוח/ה", "במידה מועטה", "במידה בינונית", "במידה רבה", "במידה רבה מאוד"],
+            index=None
+        )
+
+        # 16. התמודדות עם קושי טכנולוגי
+        q16_tech_difficulty = st.radio(
+            "16. כאשר את/ה נתקל/ת בקושי טכנולוגי, כיצד את/ה נוהג/ת לפעול?",
+            ["מוותר/ת", "מבקש/ת עזרה מאחרים", "מנסה לבד עד שמצליח/ה", "מחפש/ת פתרון באינטרנט", "אחר"],
+            index=None
+        )
+        q16_other = st.text_input("אם בחרת 'אחר' בהתמודדות עם קושי, פרט/י כאן:")
+
+        # 17. חשיבות הבנת אופן הפעולה
+        q17_understand_tech = st.radio(
+            "17. עד כמה חשוב לך להבין כיצד מערכות טכנולוגיות פועלות?",
+            ["כלל לא חשוב", "במידה מועטה", "במידה בינונית", "במידה רבה", "במידה רבה מאוד"],
+            index=None
+        )
+
+        # 18. אבחון סוכרת מסוג 2
+        q18_diabetes_diagnosis = st.radio(
+            "18. האם אובחנת בעבר עם סוכרת מסוג 2?",
+            ["כן", "לא", "טרום־סוכרת"],
+            index=None
+        )
+
+        # 19. סוכרת במשפחה
+        q19_family_diabetes = st.radio(
+            "19. האם יש לך בן/בת משפחה קרוב/ה המתמודד/ת עם סוכרת מסוג 2?",
+            ["כן", "לא"],
+            index=None
+        )
+
+        submitted = st.form_submit_button("סיום שאלון ומעבר לשיחה עם העוזר הקליני ←")
 
         if submitted:
-            if age_group == "בחר/י..." or gender == "בחר/י..." or diabetes_relation == "בחר/י...":
-                st.warning("אנא השלם/י את כל השדות לפני המעבר לשיחה.")
+            # בדיקת מענה על שאלות חובה
+            mandatory_checks = [
+                q1_age, q2_gender, q3_education, q4_residence, q5_internet_freq,
+                q6_smartphone_freq, q7_ai_experience, q8_chatbot_freq, q9_health_status,
+                q10_health_search_freq, q11_native_lang, q12_search_lang, q13_digital_devices,
+                q15_tech_confidence, q16_tech_difficulty, q17_understand_tech,
+                q18_diabetes_diagnosis, q19_family_diabetes
+            ]
+            if any(item is None for item in mandatory_checks):
+                st.warning("אנא השלם/י את כל השאלות לפני המעבר לשיחה.")
             else:
-                demo_data = {
-                    "age_group": age_group,
-                    "gender": gender,
-                    "diabetes_relation": diabetes_relation,
-                    "ai_experience": ai_experience
+                # איסוף שימושים טכנולוגיים
+                tech_uses = []
+                if tech_comm: tech_uses.append("תקשורת (WhatsApp, מיילים)")
+                if tech_search: tech_uses.append("חיפוש מידע באינטרנט")
+                if tech_admin: tech_uses.append("ניהול עניינים אישיים")
+                if tech_content: tech_uses.append("צריכת תוכן")
+                if tech_social: tech_uses.append("רשתות חברתיות")
+                if tech_other.strip(): tech_uses.append(f"אחר: {tech_other.strip()}")
+
+                full_demographics = {
+                    "age": q1_age,
+                    "gender": q2_gender,
+                    "education": q3_education,
+                    "residence": q4_residence,
+                    "internet_frequency": q5_internet_freq,
+                    "smartphone_frequency": q6_smartphone_freq,
+                    "ai_experience": q7_ai_experience,
+                    "chatbot_frequency": q8_chatbot_freq,
+                    "health_status": q9_health_status,
+                    "health_search_frequency": q10_health_search_freq,
+                    "native_language": q11_other.strip() if q11_native_lang == "אחר" and q11_other.strip() else q11_native_lang,
+                    "search_language": q12_other.strip() if q12_search_lang == "שפה אחרת" and q12_other.strip() else q12_search_lang,
+                    "digital_devices_frequency": q13_digital_devices,
+                    "technology_uses": tech_uses,
+                    "tech_confidence": q15_tech_confidence,
+                    "tech_difficulty_action": q16_other.strip() if q16_tech_difficulty == "אחר" and q16_other.strip() else q16_tech_difficulty,
+                    "importance_of_understanding_tech": q17_understand_tech,
+                    "diabetes_type_2_diagnosis": q18_diabetes_diagnosis,
+                    "family_diabetes_type_2": q19_family_diabetes
                 }
-                save_participant(st.session_state.session_id, demo_data)
+
+                save_participant(st.session_state.session_id, full_demographics)
                 st.session_state.demographics_completed = True
                 st.rerun()
 

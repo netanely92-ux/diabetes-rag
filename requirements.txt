@@ -1,6 +1,7 @@
+supabase
 streamlit
+groq
 langchain-community
 langchain-huggingface
-langchain-groq
-sentence-transformers
+sentence-transformers==3.0.1
 chromadb

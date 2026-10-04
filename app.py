@@ -138,7 +138,7 @@ def load_rag():
     retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
     
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
+        model="llama-3.1-70b-versatile",
         groq_api_key=GROQ_API_KEY,
         temperature=0.2
     )

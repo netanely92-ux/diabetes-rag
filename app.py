@@ -32,131 +32,131 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# שדרוג עיצוב מלא - מודרני, נקי ו-RTL מוקפד
+# הגדרת כיווניות RTL מוחלטת לכל רכיבי האפליקציה
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap');
 
-    /* בסיס האתר וטיפוגרפיה */
-    html, body, [class*="css"], .stApp {
-        font-family: 'Assistant', -apple-system, BlinkMacSystemFont, sans-serif !important;
-        background-color: #f8fafc !important;
+    /* כפיית כיווניות RTL על כל הדף והאלמנטים */
+    html, body, [class*="css"], .stApp, .stMarkdown, .stMarkdown p, .stMarkdown span {
+        font-family: 'Rubik', sans-serif !important;
         direction: rtl !important;
         text-align: right !important;
+        unicode-bidi: embed !important;
+    }
+
+    body {
+        background-color: #f8fafc !important;
         color: #1e293b !important;
     }
 
-    /* כותרת עליונה בסגנון Card קליני יוקרתי */
+    /* כרטיסיית כותרת */
     .hero-card {
         background: #ffffff;
-        border-radius: 18px;
-        padding: 1.5rem 1.75rem;
+        border-radius: 16px;
+        padding: 1.5rem;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
         border: 1px solid #e2e8f0;
-        border-top: 4px solid #0284c7;
-        text-align: right;
+        border-right: 6px solid #2563eb;
+        direction: rtl !important;
+        text-align: right !important;
     }
     .hero-card h2 {
         margin: 0;
         font-size: 1.5rem;
         font-weight: 700;
-        color: #0f172a;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        color: #1e3a8a;
+        direction: rtl !important;
+        text-align: right !important;
     }
     .hero-card p {
         margin: 0.4rem 0 0 0;
         font-size: 0.95rem;
         color: #64748b;
-        font-weight: 400;
-        line-height: 1.5;
+        direction: rtl !important;
+        text-align: right !important;
     }
 
-    /* עיצוב בועות ההודעות בצ'אט */
+    /* כפיית RTL על כל בועות השיחה והתוכן שלהן */
     div[data-testid="stChatMessage"] {
         direction: rtl !important;
         text-align: right !important;
         padding: 1.1rem 1.35rem !important;
         border-radius: 16px !important;
         margin-bottom: 1rem !important;
-        font-size: 1.02rem !important;
+        font-size: 1.05rem !important;
         line-height: 1.7 !important;
-        max-width: 90% !important;
     }
 
-    /* הודעת משתמש */
+    div[data-testid="stChatMessageContent"] {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+
+    div[data-testid="stChatMessageContent"] * {
+        direction: rtl !important;
+        text-align: right !important;
+        unicode-bidi: plaintext !important;
+    }
+
+    /* בועת המשתמש */
     div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarIcon-user"]) {
-        background-color: #f0fdfa !important;
-        border: 1px solid #ccfbf1 !important;
-        border-right: 4px solid #0d9488 !important;
-        margin-left: auto !important;
-        margin-right: 0 !important;
+        background-color: #eff6ff !important;
+        border: 1px solid #dbeafe !important;
+        border-right: 4px solid #3b82f6 !important;
     }
 
-    /* הודעת עוזר קליני */
+    /* בועת העוזר הקליני */
     div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarIcon-assistant"]) {
         background-color: #ffffff !important;
         border: 1px solid #e2e8f0 !important;
-        border-right: 4px solid #0284c7 !important;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03) !important;
-        margin-right: auto !important;
-    }
-
-    /* שדרוג שדה ההקלדה (Chat Input) */
-    div[data-testid="stChatInput"] {
-        direction: rtl !important;
-        padding-bottom: 1.5rem !important;
-    }
-    div[data-testid="stChatInput"] > div {
-        border-radius: 16px !important;
-        border: 1px solid #cbd5e1 !important;
-        background-color: #ffffff !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06) !important;
-        transition: all 0.2s ease-in-out !important;
-    }
-    div[data-testid="stChatInput"] > div:focus-within {
-        border-color: #0284c7 !important;
-        box-shadow: 0 4px 18px rgba(2, 132, 199, 0.15) !important;
-    }
-    div[data-testid="stChatInput"] textarea {
-        direction: rtl !important;
-        text-align: right !important;
-        font-family: 'Assistant', sans-serif !important;
-        font-size: 1rem !important;
-        color: #0f172a !important;
-        padding: 0.8rem 1rem !important;
-    }
-    div[data-testid="stChatInput"] textarea::placeholder {
-        color: #94a3b8 !important;
-        font-weight: 400 !important;
+        border-right: 4px solid #10b981 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
     }
 
     /* רשימות ותבליטים */
     ul, ol {
         direction: rtl !important;
         text-align: right !important;
-        padding-right: 1.5rem !important;
+        padding-right: 1.6rem !important;
         padding-left: 0 !important;
         margin: 0.6rem 0 !important;
     }
     li {
+        direction: rtl !important;
+        text-align: right !important;
         margin-bottom: 0.35rem !important;
     }
 
-    /* הסתרת רכיבי מערכת מיותרים */
+    /* שדה קלט - Chat Input */
+    div[data-testid="stChatInput"] {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+    div[data-testid="stChatInput"] textarea {
+        direction: rtl !important;
+        text-align: right !important;
+        font-family: 'Rubik', sans-serif !important;
+        font-size: 1rem !important;
+        unicode-bidi: plaintext !important;
+    }
+    div[data-testid="stChatInput"] textarea::placeholder {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+
     #MainMenu, footer, header {
         visibility: hidden !important;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# כותרת ראשית מעוצבת
+# כותרת האפליקציה
 st.markdown("""
 <div class="hero-card">
-    <h2>🩺 עוזר מידע קליני לסוכרת</h2>
-    <p>מערכת מבוססת ידע קליני למענה מקצועי בנושאי מניעה, תסמינים, תזונה ואיזון רפואי</p>
+    <h2>🩺 עוזר מידע קליני בנושא סוכרת</h2>
+    <p>מערכת מענה מבוססת מידע רפואי בנושאי מניעה, תסמינים, תזונה וטיפול</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -207,7 +207,7 @@ SYSTEM_PROMPT = """אתה עוזר וירטואלי מומחה, מקצועי, א
 1. ברכות ושיחת חולין: אם המשתמש מברך ("שלום", "היי", "מה נשמע", "תודה"), ענה בצורה מכבדת, חמה ולבבית בעברית טבעית, והסבר שאתה כאן לסייע בכל שאלה בנושאי סוכרת, איזון סוכר ותזונה.
 2. שאלות קליניות: ספק תשובה מנומקת, ברורה ומאורגנת היטב (השתמש בנקודות או פסקאות קצרות במידת הצורך) על בסיס המידע הרפואי הנתון.
 3. סייג רפואי: אם המידע אינו מופיע במאגר, ציין זאת ישירות והמלץ להיוועץ ברופא המטפל או בצוות הרפואי.
-4. שפה וסגנון: כתוב בעברית תקנית, עשירה ומקצועית.
+4. שפה וסגנון: כתוב בעברית תקנית, עשירה ומקצועית בלבד.
 """
 
 GREETINGS = {"שלום", "היי", "הי", "בוקר טוב", "ערב טוב", "צהריים טובים", "מה קורה", "מה נשמע", "מי אתה", "תודה", "תודה רבה"}
@@ -218,14 +218,15 @@ if "session_id" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# הצגת היסטוריית השיחה עם מעטפת RTL
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+        st.markdown(f"<div dir='rtl' style='text-align: right;'>{msg['content']}</div>", unsafe_allow_html=True)
 
-if user_query := st.chat_input("שאל שאלה בנושא סוכרת, מדדים, תזונה או פתח בשיחה..."):
+if user_query := st.chat_input("שאל שאלה בנושא סוכרת, תזונה או מדדים..."):
     st.session_state.messages.append({"role": "user", "content": user_query})
     with st.chat_message("user"):
-        st.markdown(user_query)
+        st.markdown(f"<div dir='rtl' style='text-align: right;'>{user_query}</div>", unsafe_allow_html=True)
 
     with st.chat_message("assistant"):
         with st.spinner("מעבד מידע קליני..."):
@@ -258,7 +259,8 @@ if user_query := st.chat_input("שאל שאלה בנושא סוכרת, מדדי�
                 ans_text = f"⚠ שגיאה: {str(e)}"
 
             latency = time.time() - start_time
-            st.markdown(ans_text)
+            # הצגת התשובה עטופה ב-div עם dir=rtl מפורש
+            st.markdown(f"<div dir='rtl' style='text-align: right;'>{ans_text}</div>", unsafe_allow_html=True)
             
             log_interaction(
                 session_id=st.session_state.session_id,

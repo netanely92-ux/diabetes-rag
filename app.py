@@ -13,7 +13,6 @@ from langchain_huggingface import HuggingFaceEmbeddings
 # הגבלת משאבי CPU וזיכרון למניעת קריסות בענן
 torch.set_num_threads(1)
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-תאימות בסיסית
 
 # הגדרות Groq API
 part1 = "gsk_gHj5VLlVTDHJbFJVbgFY"

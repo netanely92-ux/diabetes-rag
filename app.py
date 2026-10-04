@@ -136,26 +136,26 @@ def load_rag():
     vectorstore = Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
     retriever = vectorstore.as_retriever(search_kwargs={"k": 2})
     
-    # שימוש ב-llama-3.1-8b-instant למהירות מקסימלית ואמינות API
+    # שימוש במזהה הדגם הפעיל והיציב ביותר ב-Groq
     llm = ChatGroq(
-        model="llama-3.1-8b-instant",
+        model="llama3-8b-8192",
         groq_api_key=GROQ_API_KEY,
-        temperature=0.3
+        temperature=0.2
     )
     return retriever, llm
 
 retriever, llm = load_rag()
 
-SYSTEM_PROMPT = """אתה עוזר וירטואלי חכם, אדיב, רהוט ונעים לשיחה, המתמחה במידע קליני בנושא סוכרת.
+SYSTEM_PROMPT = """אתה עוזר מידע קליני חכם, אדיב, רהוט ונעים לשיחה, המתמחה בסוכרת.
 
-קטעי המידע הבאים עומדים לרשותך מהמאגר:
+קטעי המידע הבאים עומדים לרשותך מהמאגר המקצועי:
 {context}
 
 הנחיות לתגובה:
-1. שיחה כללית וברכות: אם המשתמש פותח בברכה ("שלום", "היי", "מה נשמע", "בוקר טוב") או שואל שאלה כללית על מי אתה, הגב בצורה טבעית, חמה ואנושית. ספר בקצרה שאתה כאן כדי לסייע בכל שאלה בנושא סוכרת, מניעה, תזונה ובריאות.
-2. שאלות מקצועיות על סוכרת: נסח תשובה ברורה, ממוקדת ומקצועית בהתבסס על המידע הרפואי. השתמש בפסקאות נוחות לקריאה או ברשימות תבליטים.
-3. מידע שלא מופיע: אם נשאלת שאלה רפואית שאין לגביה מידע בקטעים, ציין זאת בפשטות ובכנות, והמלץ להיוועץ ברופא המטפל.
-4. שפה: ענה תמיד בעברית טבעית, רהוטה וזורמת.
+1. שיחת פתיחה וברכות: אם המשתמש מברך לשלום ("שלום", "היי", "מה נשמע", "בוקר טוב") או מודה לך ("תודה"), השב בצורה נעימה, קצרה וטבעית. הסבר בקצרה שאתה כאן לסייע בשאלות הקשורות לסוכרת, תזונה ואורח חיים בריא.
+2. שאלות מקצועיות: השב בהתבסס על המידע הרפואי שסופק. נסח תשובה ברורה, ממוקדת ומקצועית (מומלץ להשתמש בתבליטים לקריאה נוחה).
+3. חוסר במידע: אם נשאלת שאלה רפואית שאין לה מענה בקטעים, ציין זאת בפשטות והמלץ להיוועץ ברופא המטפל.
+4. ענה תמיד בעברית טבעית ורהוטה.
 """
 
 prompt = ChatPromptTemplate.from_messages([
@@ -185,20 +185,20 @@ if user_query := st.chat_input("שאל כל שאלה בנושא סוכרת או 
             start_time = time.time()
             clean_q = user_query.strip().lower()
 
-            # מענה מהיר ומותאם לשיחת פתיחה ללא הרצת RAG מיותרת
-            if clean_q in GREETINGS or len(clean_q.split()) <= 2 and any(w in clean_q for w in ["שלום", "היי", "הי", "מה נשמע", "מה קורה"]):
-                docs = []
-                context = "אין צורך במקורות - שיחת פתיחה או ברכה."
+            # בדיקה האם זו פנייה כללית / ברכה
+            is_greeting = clean_q in GREETINGS or (len(clean_q.split()) <= 2 and any(w in clean_q for w in ["שלום", "היי", "הי", "מה נשמע", "מה קורה"]))
+
+            if is_greeting:
+                context = "שיחת פתיחה / ברכה - אין צורך בהקשר רפואי."
                 sources = []
             else:
                 docs = retriever.invoke(user_query)
-                # חיתוך מקטעים ארוכים למניעת עומס על ה-API
                 context = "\n\n---\n\n".join([doc.page_content[:1500] for doc in docs])
                 sources = list(set([doc.metadata.get("source", "Unknown") for doc in docs]))
 
             chain = prompt | llm
             response = chain.invoke({"context": context, "question": user_query})
-            ans_text = response.content
+            ans_text = response.content if hasattr(response, "content") else str(response)
             
             latency = time.time() - start_time
             

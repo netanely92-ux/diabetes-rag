@@ -152,13 +152,10 @@ if "demographics_completed" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# פונקציות שמירה ל-Supabase עם טיפול שגיאות והמרה מפורשת ל-UTF-8
-def save_participant(session_id: str, demographics_data: dict):
+# פונקציות שמירה ל-Supabase במבנה עמודות שטוח
+def save_participant(participant_record: dict):
     try:
-        supabase.table("participants").insert({
-            "session_id": str(session_id),
-            "demographics": demographics_data
-        }).execute()
+        supabase.table("participants").insert(participant_record).execute()
     except Exception as e:
         st.error(f"שגיאת שמירת נתוני שאלון: {str(e)}")
 
@@ -348,36 +345,37 @@ if not st.session_state.demographics_completed:
                 st.warning("אנא השלם/י את כל השאלות לפני המעבר לשיחה.")
             else:
                 tech_uses = []
-                if tech_comm: tech_uses.append("תקשורת (WhatsApp, מיילים)")
-                if tech_search: tech_uses.append("חיפוש מידע באינטרנט")
+                if tech_comm: tech_uses.append("תקשורת")
+                if tech_search: tech_uses.append("חיפוש מידע")
                 if tech_admin: tech_uses.append("ניהול עניינים אישיים")
                 if tech_content: tech_uses.append("צריכת תוכן")
                 if tech_social: tech_uses.append("רשתות חברתיות")
                 if tech_other.strip(): tech_uses.append(f"אחר: {tech_other.strip()}")
 
-                full_demographics = {
-                    "age": q1_age,
-                    "gender": q2_gender,
-                    "education": q3_education,
-                    "residence": q4_residence,
-                    "internet_frequency": q5_internet_freq,
-                    "smartphone_frequency": q6_smartphone_freq,
-                    "ai_experience": q7_ai_experience,
-                    "chatbot_frequency": q8_chatbot_freq,
-                    "health_status": q9_health_status,
-                    "health_search_frequency": q10_health_search_freq,
-                    "native_language": q11_other.strip() if q11_native_lang == "אחר" and q11_other.strip() else q11_native_lang,
-                    "search_language": q12_other.strip() if q12_search_lang == "שפה אחרת" and q12_other.strip() else q12_search_lang,
-                    "digital_devices_frequency": q13_digital_devices,
-                    "technology_uses": tech_uses,
-                    "tech_confidence": q15_tech_confidence,
-                    "tech_difficulty_action": q16_other.strip() if q16_tech_difficulty == "אחר" and q16_other.strip() else q16_tech_difficulty,
-                    "importance_of_understanding_tech": q17_understand_tech,
-                    "diabetes_type_2_diagnosis": q18_diabetes_diagnosis,
-                    "family_diabetes_type_2": q19_family_diabetes
+                participant_record = {
+                    "session_id": str(st.session_state.session_id),
+                    "q1_age": q1_age,
+                    "q2_gender": q2_gender,
+                    "q3_education": q3_education,
+                    "q4_residence": q4_residence,
+                    "q5_internet_frequency": q5_internet_freq,
+                    "q6_smartphone_frequency": q6_smartphone_freq,
+                    "q7_ai_experience": q7_ai_experience,
+                    "q8_chatbot_frequency": q8_chatbot_freq,
+                    "q9_health_status": q9_health_status,
+                    "q10_health_search_frequency": q10_health_search_freq,
+                    "q11_native_language": q11_other.strip() if q11_native_lang == "אחר" and q11_other.strip() else q11_native_lang,
+                    "q12_search_language": q12_other.strip() if q12_search_lang == "שפה אחרת" and q12_other.strip() else q12_search_lang,
+                    "q13_digital_devices_frequency": q13_digital_devices,
+                    "q14_technology_uses": ", ".join(tech_uses),
+                    "q15_tech_confidence": q15_tech_confidence,
+                    "q16_tech_difficulty_action": q16_other.strip() if q16_tech_difficulty == "אחר" and q16_other.strip() else q16_tech_difficulty,
+                    "q17_importance_of_understanding_tech": q17_understand_tech,
+                    "q18_diabetes_diagnosis": q18_diabetes_diagnosis,
+                    "q19_family_diabetes": q19_family_diabetes
                 }
 
-                save_participant(st.session_state.session_id, full_demographics)
+                save_participant(participant_record)
                 st.session_state.demographics_completed = True
                 st.rerun()
 
